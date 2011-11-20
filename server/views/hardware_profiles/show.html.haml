@@ -1,0 +1,19 @@
+%h1
+  = @profile.name
+
+%dl
+  %di
+    %dt
+      Architecture
+    %dd
+      = format_hardware_property @profile.architecture
+  %di
+    %dt
+      Memory
+    %dd
+      = format_hardware_property @profile.memory
+  %di
+    %dt
+      Storage
+    %dd
+      = format_hardware_property @profile.storage

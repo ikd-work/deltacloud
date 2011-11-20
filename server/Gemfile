@@ -1,0 +1,55 @@
+source "http://rubygems.org"
+
+gem "rake"
+gem "eventmachine"
+gem "haml"
+gem "sinatra"
+gem "rack"
+gem "rack-accept"
+gem "thin"
+gem "rerun"
+gem "json"
+gem "net-ssh"
+
+group :linode do
+  gem 'linode'
+end
+
+group :amazon do
+  gem 'activesupport'
+  gem 'aws'
+end
+
+group 'terremark' do
+  gem 'fog'
+  gem 'excon'
+end
+
+group :azure do
+  gem 'waz-blobs'
+end
+
+group :rackspace do
+  gem 'cloudservers'
+  gem 'cloudfiles'
+end
+
+group :rhevm do
+  gem 'rest-client'
+end
+
+group :test do
+  gem 'ruby-debug', :platforms => :mri_18
+  gem 'ruby-debug19', :platforms => :mri_19, :require => 'ruby-debug'
+  gem "compass"
+  gem "vcr"
+  gem "webmock"
+  gem "nokogiri"
+  gem "rack-test"
+  gem "ci_reporter"
+  gem "cucumber"
+  gem "rcov"
+  gem "rspec", "< 2.0.0" 
+  # This gem is needed by activesupport (aws)
+  gem "i18n"
+end

@@ -1,0 +1,12 @@
+%h1
+  Deltacloud API #{settings.version}
+
+%ul
+  - @collections.sort_by { |k| k.to_s }.each do |key|
+    %li
+      = link_to key.to_s.gsub('_', ' ').titlecase, url_for("/api/#{key}")
+      %dl
+        - collections[key].operations.each_key do |op|
+          - next if [:index, :show].include?(op)
+          %dt
+            = op

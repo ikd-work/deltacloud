@@ -1,0 +1,37 @@
+%h2
+  = @collection.name.to_s.titlecase
+
+%p #{@collection.description}
+
+%br
+
+%h3 Operations:
+
+%table
+  %thead
+    %tr
+      %th Name
+      %th Description
+  %tbody
+    - @operations.keys.sort_by { |k| k.to_s }.each do |operation|
+      %tr
+        %td{:style => "width:15em"}
+          %a{:href => url_for("/api/docs/#{@collection.name.to_s}/#{operation}")} #{operation}
+        %td{:style => "width:10em"} #{@operations[operation].description}
+
+%h3 Features:
+
+%table
+  %thead
+    %tr
+      %th Name
+      %th Description
+      %th Modified Operations
+  %tbody
+    - @features.sort_by { |f| f.name.to_s }.each do |feature|
+      %tr
+        %td= feature.name
+        %td= feature.description
+        %td
+          - feature.operations.each do |op|
+            %a{:href => url_for("/api/docs/#{@collection.name.to_s}/#{op.name}")} #{op.name}

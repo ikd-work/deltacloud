@@ -1,0 +1,23 @@
+%h1 Storage Snapshots
+
+%table
+  %thead
+    %tr
+      %th ID
+      %th Volume
+      %th Created
+      %th State
+      %th Actions
+  %tbody
+    - @storage_snapshots.each do |snapshot|
+      %tr
+        %td
+          = link_to snapshot.id, storage_snapshot_url( snapshot.id )
+        %td
+          = link_to snapshot.storage_volume_id, storage_volume_url( snapshot.storage_volume_id )
+        %td
+          = snapshot.created
+        %td
+          = snapshot.state
+        %td
+          = link_to_action "Delete", destroy_storage_snapshot_url(snapshot.id), :delete

@@ -1,0 +1,25 @@
+%h1 Images
+
+%table.display
+  %thead
+    %tr
+      %th
+        ID
+      %th
+        Name
+      %th
+        Owner
+      %th
+        Description
+  %tbody
+    - @images.each do |image|
+      %tr
+        %td
+          = link_to image.id, image_url(image.id)
+        %td
+          = image.name
+        %td
+          = link_to image.owner_id, images_url
+        %td
+          = image.description
+

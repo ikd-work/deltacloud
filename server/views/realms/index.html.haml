@@ -1,0 +1,26 @@
+%h1
+  Realms
+
+%table.display
+  %thead
+    %tr
+      %th
+        ID
+      %th
+        Name
+      %th
+        State
+      %th
+        Limit
+  %tbody
+    - @realms.each do |realm|
+      %tr
+        %td
+          = link_to realm.id, realm_url( realm.id )
+        %td
+          = realm.name
+        %td
+          = realm.state
+        %td
+          = realm.limit
+

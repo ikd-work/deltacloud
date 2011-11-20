@@ -1,0 +1,92 @@
+%h1 Launch new Instance
+
+%h3{:class => "description"}= @image.description
+%h2= @image.id
+
+%form{ :action => instances_url, :method => :post, :class => :new_instance }
+  %input{ :name => :image_id, :type => :hidden, :value => @instance.image_id }/
+  %p
+    %label
+      Name:
+    %input{ :name => 'name', :size => 30, :type => :text }/
+  -if driver_has_feature?(:instance_count)
+    %p
+      %label
+        Number of instances:
+      %input{ :type => :text, :value => "1", :name => :instance_count }
+  -if driver_has_feature?(:sandboxing)
+    %p
+      %label
+        Sandbox?:
+      %input{ :type => :checkbox, :value => "1", :name => :sandbox }
+  -if driver_has_feature?(:register_to_load_balancer)
+    %p
+      %label
+        Load balancer to assign:
+      %select{:name => 'load_balancer_id'}
+        %option
+        - @load_balancers.each do |load_balancer|
+          %option{:value => load_balancer.id} #{load_balancer.id}
+  -if driver_has_feature?(:authentication_key)
+    %p
+      %label
+        Instance Keyname:
+      %select{:name => 'keyname'}
+        %option
+        - @keys.each do |key|
+          %option{ :value => key.id } #{key.id}
+  - if !@hardware_profiles.empty?
+    %h3 What size machine?
+    - for hwp in @hardware_profiles
+      .radio-group
+        %label{ :for => "hwp_id_#{hwp.name}" }
+          %input{ :type => :radio, :name => 'hwp_id', :value => hwp.name }/
+          = hwp.name
+          %br/
+          %span.radio-group-details
+            - first = true
+            - hwp.properties.select { |prop| prop.fixed? }.each do |prop|
+              - unless first
+                ,
+              - first = false
+              = format_hardware_property prop
+          - hwp.properties.reject { |prop| prop.fixed? }.each do |prop|
+            %span.radio-group-details
+              %label{ :for => "#{prop.param}_#{hwp.name}" }
+                = prop.name
+              - if prop.kind == :enum
+                %select{ :size => 1, :name => prop.param }
+                  - for v in prop.values
+                    %option= v
+                = prop.unit
+              - else
+                %input{ :name => prop.param, :size => 10, :value => "#{prop.default}" }
+                = prop.unit
+                (value must be between #{prop.first} #{prop.unit} and #{prop.last} #{prop.unit})
+  - if !@realms.empty?
+    %h3 Where do you want it?
+    - for realm in @realms
+      .radio-group
+        %label{ :for => "realm_id_#{realm.id}" }
+          %input{ :type => :radio, :name => 'realm_id', :value => realm.id }/
+          = realm.id
+          %br/
+          %span.radio-group-details
+            = "#{realm.name}, #{realm.limit}"
+  - if driver_has_feature?(:user_files, :instances)
+    %h2 User-supplied files
+    %table
+      %thead
+        %tr
+          %th
+          %th Path
+          %th Content (must be base64 encoded)
+      %tbody
+        - 1.upto(5) do |i|
+          %tr
+            %td #{i.ordinalize} File:
+            %td
+              %input{ :name => "path#{i}", :size => 20 }
+            %td
+              %input{ :name => "content#{i}", :size => 50 }
+  %input{ :type => :submit, :name => "commit", :value => "create" }/

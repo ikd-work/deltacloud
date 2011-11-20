@@ -1,0 +1,8 @@
+%states
+  - for state in @machine.states
+    %state{ :name=>state }
+      - for transition in state.transitions
+        - if ( transition.automatically? )
+          %transition{ :to=>transition.destination, :auto=>'true'}
+        - else
+          %transition{ :to=>transition.destination, :action=>transition.action }

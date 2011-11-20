@@ -1,0 +1,25 @@
+%h1
+  Hardware Profiles
+
+%table.display
+  %thead
+    %tr
+      %th
+        Name
+      %th
+        Architecture
+      %th
+        Memory
+      %th
+        Storage
+  %tbody
+    - for profile in @profiles
+      %tr
+        %td
+          = link_to profile.name, hardware_profile_url( profile.name )
+        %td
+          = format_hardware_property profile.architecture
+        %td
+          = format_hardware_property profile.memory
+        %td
+          = format_hardware_property profile.storage

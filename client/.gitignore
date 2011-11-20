@@ -1,0 +1,4 @@
+spec_report.html
+*.swp
+tmp/
+*.gem

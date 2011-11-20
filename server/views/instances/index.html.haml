@@ -1,0 +1,32 @@
+%h1 Instances
+
+%table.display
+  %thead
+    %tr
+      %th ID
+      %th Owner
+      %th Name
+      %th Image
+      %th Profile
+      %th State
+      %th Actions
+  %tbody
+    - @instances.each do |instance|
+      %tr
+        %td
+          = link_to truncate_words(instance.id), instance_url( instance.id )
+        %td
+          = link_to instance.owner_id, images_url
+        %td
+          = instance.name
+        %td
+          = link_to truncate_words(instance.image_id), image_url( instance.image_id )
+        %td
+          = instance.hardware_profile ? link_to(instance.hardware_profile, hardware_profile_url( instance.instance_profile.id )) : 'default'
+        %td
+          = image_for_state(instance.state)
+        %td
+          -instance.actions.each do |action|
+            =link_to_action action, self.send(:"#{action}_instance_url", instance.id), instance_action_method(action)
+          - if driver.respond_to?(:run_on_instance) and instance.state=="RUNNING"
+            =link_to_action "Run command", url_for("/api/instances/#{instance.id}/run"), :get

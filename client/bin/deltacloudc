@@ -1,0 +1,242 @@
+#!/usr/bin/env ruby
+#
+# Copyright (C) 2009  Red Hat, Inc.
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+require 'rubygems'
+require 'optparse'
+require 'uri'
+require 'deltacloud'
+require 'plain_formatter'
+
+include DeltaCloud::PlainFormatter
+
+options = {
+  :verbose => false
+}
+
+@optparse = OptionParser.new do |opts|
+
+opts.banner = <<BANNER
+Usage:
+deltacloudc collection operation [options]
+
+URL format:
+API_URL=http://[user]:[password]@[api_url][port][/uri]
+
+Examples:
+
+ 1. To list collections for deltacloud api on port 3333 of server deltacloud.foo
+
+        deltacloudc -l -u http://user:password@deltacloud.foo:3333/api
+
+ 2. To list the operations for the 'images' collection:
+
+        deltacloudc images -l -u http://user:password@deltacloud.foo:3333/api
+
+ 3. To list all images (i.e. call the 'index' operation of 'images'):
+
+        deltacloudc images index -u http://user:password@deltacloud.foo:3333/api
+
+ 4. To get the details of image '5':
+
+        deltacloudc images show -i 5 -u http://user:password@deltacloud.foo:3333/api
+
+Options:
+BANNER
+  opts.on( '-i', '--id ID', 'ID for operation') { |id| options[:id] = id }
+  opts.on( '-d', '--image-id ID', 'Image ID') { |id| options[:image_id] = id }
+  opts.on( '-b', '--bucket-id ID', 'Bucket ID') {|id| options[:bucket_id] = id }
+  opts.on( '-a', '--arch ARCH', 'Architecture (x86, x86_64)') { |id| options[:architecture] = id }
+  opts.on( '-p', '--hardware-profile HARDWARE_PROFILE', 'Hardware Profile') { |id| options[:hwp_id] = id }
+  opts.on( '-n', '--name NAME', 'Name (for instance eg.)') { |name| options[:name] = name }
+  opts.on( '-s', '--state STATE', 'Instance state (RUNNING, STOPPED)') { |state| options[:state] = state }
+  opts.on( '-u', '--url URL', 'API url ($API_URL variable)') { |url| options[:api_url] = url }
+  opts.on( '-l', '--list', 'List collections/operations') { |id| options[:list] = true }
+  opts.on( '-h', '--help', 'Display this screen' ) { puts @optparse; Kernel.exit! }
+  opts.on( '-v', '--version', 'Display API version' ) { options[:version]=true }
+  opts.on( '-V', '--verbose', 'Print verbose messages' ) { options[:verbose]=true }
+  opts.on( '-f', '--file-path PATH', 'local path for new blob data') {|path| options[:file_path]=path }
+  opts.on( '-m', '--blob-metadata k1=v1, k2=v2', 'Comma seperated k=v pairs for blob metadata (for create operation)') do |meta|
+                    blob_meta = {}
+                    meta.gsub!(/ /,"")
+                    meta.scan(/(\w+)=(\w+)/).map {|k,v| blob_meta[k] = v }
+                    options[:blob_metadata] = blob_meta
+                end
+end
+
+def invalid_usage(error_msg='')
+  puts "\n ERROR: #{error_msg} \n\n"
+  puts @optparse
+  exit(1)
+end
+
+begin
+    @optparse.parse!
+rescue Exception => e
+    invalid_usage(e.message)
+end
+
+# First try to get API_URL from environment
+options[:api_url] = ENV['API_URL'] if options[:api_url].nil?
+
+if(options[:api_url].nil?)
+    invalid_usage("You must supply the url to the deltacloud api; either use '-u' flag or set the 'API_URL' environment variable")
+end
+
+url = URI.parse(options[:api_url])
+api_url = "http://#{url.host}#{url.port ? ":#{url.port}" : ''}#{url.path}"
+
+options[:collection] = ARGV[0]
+options[:operation] = ARGV[1]
+
+# Connect to Deltacloud API and fetch all entry points
+client = DeltaCloud.new(url.user || ENV['API_USER'], url.password || ENV['API_PASSWORD'], api_url)
+collections = client.entry_points.keys
+
+# Exclude collection which don't have methods in client library yet
+collections.delete(:instance_states)
+#add blob collection if buckets is present
+collections << :blob if collections.include?(:buckets)
+
+# If list parameter passed print out available collection
+# with API documentation
+if options[:list] and options[:collection].nil?
+  collections.each do |c|
+    puts sprintf("%-22s", c.to_s[0, 22])
+  end
+  exit(0)
+end
+
+# If collection parameter is present and user requested list
+# print all operation defined for collection with API documentation
+if options[:list] and options[:collection]
+  #deal with blobs again - bypass 'normal' docs procedure
+  if options[:collection] =~ /blob/i
+    puts "create \t\t: Create a new blob in a specified bucket (POST /api/buckets/:bucket)"
+    puts "destroy \t: Delete a specified blob in a specified bucket (DELETE /api/buckets/:bucket/:blob)"
+    puts "show \t\t: Get details of a specified blob in a specified bucket (GET /api/buckets/:bucket/:blob)"
+    puts "data \t\t: Get the contents of a specified blob - the blob data content itself"
+    exit(0)
+  end
+  doc = client.documentation(options[:collection])
+  doc.operations.each do |c|
+    puts sprintf("%-20s: %s", c.operation, c.description)
+  end
+  exit(0)
+end
+
+if options[:version]
+  puts "Deltacloud API(#{client.driver_name}) 0.1"
+  exit(0)
+end
+
+# List items from collection (typically /instances)
+# Do same if 'index' operation is set
+if options[:collection] and ( options[:operation].nil? or options[:operation].eql?('index') )
+  invalid_usage("Unknown collection: #{options[:collection]}") unless collections.include?(options[:collection].to_sym)
+#cannot list blobs - can only show a specific blob
+  invalid_usage("You must specify a particular blob with -i and a particular bucket with -b") if options[:collection] =~ (/blob/i)
+  params = {}
+  params.merge!(:architecture => options[:architecture]) if options[:architecture]
+  params.merge!(:id => options[:id]) if options[:id]
+  params.merge!(:state => options[:state]) if options[:state]
+  client.send(options[:collection].to_s, params).each do |model|
+    puts format(model)
+  end
+  exit(0)
+end
+
+if options[:collection] and options[:operation]
+
+  invalid_usage("Unknown collection: #{options[:collection]}") unless collections.include?(options[:collection].to_sym)
+
+  params = {}
+  params.merge!(:id => options[:id]) if options[:id]
+
+  # If collection is set and requested operation is 'show' just 'singularize'
+  # collection name and print item with specified id (-i parameter)
+  #Blobs are a special case so deal with first -
+  if options[:collection] =~ (/blob/i)
+    invalid_usage("Please specify the bucket for this blob using the -b option") unless options[:bucket_id]
+    invalid_usage("Missing blob ID, please specify with -i option") unless options[:id]
+    params = {}
+    params.merge!(:id => options[:id], 'bucket' => options[:bucket_id])
+    params.merge!('metadata'=>options[:blob_metadata]) unless options[:blob_metadata].nil?
+    case options[:operation]
+        when 'show' then puts format(client.send( options[:collection], params))
+        when 'data' then puts (client.blob_data(params))
+        when 'create' then
+            invalid_usage("Specify the location of the new blob data (full local path) using -f option") unless options[:file_path]
+            params.merge!('file_path'=>options[:file_path])
+            blob = client.create_blob(params)
+            puts format(blob)
+        when 'destroy' then client.destroy_blob(params)
+        else invalid_usage("Please specify a valid operation for the blob collection - try -l to see available operations")
+    end
+    exit(0)
+  end
+
+  if options[:operation].eql?('show')
+    invalid_usage("Missing ID, must be provided with --id") unless options[:id]
+    puts format(client.send(options[:collection].gsub(/s$/, ''), options[:id]))
+    exit(0)
+  end
+
+  # If collection is set and requested operation is create new instance,
+  # --image-id, --hardware-profile and --name parameters are used
+  # Returns created instance in plain form
+  if options[:collection].eql?('instances') and options[:operation].eql?('create')
+    invalid_usage("Missing image-id") unless options[:image_id]
+    if options[:name] and ! client.feature?(:instances, :user_name)
+      invalid_usage("Driver does not support user-supplied name")
+    end
+    params.merge!(:name => options[:name]) if options[:name]
+    params.merge!(:image_id => options[:image_id]) if options[:image_id]
+    params.merge!(:hwp_id => options[:hwp_id]) if options[:hwp_id]
+    instance = client.create_instance(options[:image_id], params)
+    puts format(instance)
+    exit(0)
+  end
+
+  #Create and Destroy a bucket - require the bucket id:
+  if options[:collection].eql?('buckets')
+    if options[:operation].eql?('create')
+        invalid_usage("Please specify an id for the new bucket with -i") unless options[:id]
+        bucket = client.create_bucket('id'=>options[:id])
+        puts format(bucket)
+    elsif options[:operation].eql?('destroy')
+        invalid_usage("Please specify the bucket you wish to destroy with -i") unless options[:id]
+        client.destroy_bucket('id'=>options[:id])
+    else
+        invalid_usage("Please specify a valid operation on buckets - use -l to see valid operations")
+    end
+    exit(0)
+  end
+
+  # All other operations above collections is done there:
+  if options[:collection].eql?('instances')
+    instance = client.instance(options[:id])
+    instance.send("#{options[:operation]}!".to_s)
+    instance = client.instance(options[:id])
+    puts format(instance)
+    exit(0)
+  end
+end
+
+# If all above passed (eg. no parameters)
+puts @optparse

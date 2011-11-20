@@ -1,0 +1,57 @@
+%h1
+  = @instance.id
+
+%dl
+  %di
+    %dt Image
+    %dd
+      = link_to @instance.image_id, image_url( @instance.image_id )
+  %di
+    %dt Owner
+    %dd
+      = @instance.owner_id
+  %di
+    %dt Name
+    %dd
+      = @instance.name
+  %di
+    %dt Hardware Profile
+    %dd
+      - prof = @instance.instance_profile
+      = link_to(prof.name, hardware_profile_url(prof.name))
+      = format_instance_profile(prof)
+  %di
+    %dt Realm
+    %dd
+      = @instance.realm_id ? link_to(@instance.realm_id, realm_url(@instance.realm_id)) : 'default'
+  %di
+    %dt State
+    %dd
+      = @instance.state
+  %di
+    %dt Public Addresses
+    %dd
+      = @instance.public_addresses.collect { |address| "<div>#{address}</div>" }.join
+  %di
+    %dt Private Addresses
+    %dd
+      = @instance.private_addresses.collect { |address| "<div>#{address}</div>" }.join
+  - if @instance.password
+    %di
+      %dt Username
+      %dd
+        = @instance.username
+    %di
+      %dt Password
+      %dd
+        = @instance.password
+  %di
+    %dt
+    %dd
+      -@instance.actions.each do |action|
+        =link_to_action action, self.send(:"#{action}_instance_url", @instance.id), instance_action_method(action)
+    %dt
+    %dd
+      - if @instance.can_create_image?
+        =link_to_action 'Create Image', url_for("/api/images/new?instance_id=#{@instance.id}"), :get
+

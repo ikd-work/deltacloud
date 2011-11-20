@@ -1,0 +1,14 @@
+%h1
+  = @storage_snapshot.id
+
+%dl
+  %di
+    %dt Volume
+    %dd
+      = @storage_snapshot.storage_volume_id
+    %dt Created
+    %dd
+      = @storage_snapshot.created
+    %dt State
+    %dd
+      = @storage_snapshot.state

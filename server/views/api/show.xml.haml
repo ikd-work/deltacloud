@@ -1,0 +1,5 @@
+%api{ :version => settings.version, :driver => driver_symbol }
+  - for entry_point in entry_points
+    %link{ :rel=>entry_point[0], :href=>entry_point[1] }
+      - for feature in driver.features(entry_point[0])
+        %feature{ :name=>feature.name }
